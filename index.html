@@ -1,0 +1,762 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<title>중꺾사</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&family=Noto+Serif+KR:wght@500;700&display=swap">
+<style>
+/* 밤하늘에 먹 글씨 패가 내리는 한 화면 게임. 세로 기둥을 가운데 두고, 칠판 랭킹만 가로로 넓게 쓴다. */
+:root{
+  color-scheme:dark;
+  --night:#0f1830; --night2:#17233f; --panel:#1e2c4d; --line:#34466f;
+  --paper:#f3efe3; --ink:#1b2238; --text:#eef1f8; --muted:#a9b5cf;
+  --ru:#ff8f45; --neo:#ffc799; --dao:#4fd8c4; --bud:#d4a9ff;
+  --good:#3ddc84; --bad:#ff5a67; --gold:#ffd166;
+  --display:"Black Han Sans","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --word:"Noto Serif KR","Apple SD Gothic Neo","Malgun Gothic",serif;
+}
+html,body{height:100%}
+body{background:var(--night);color:var(--text);font-family:var(--body);font-size:16px;line-height:1.55;overflow-x:hidden}
+*{box-sizing:border-box}
+h1,h2,h3,p{margin:0}
+button,input{font:inherit}
+button{cursor:pointer;border:0;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+#app{height:100%}
+.page{min-height:100%;max-width:640px;margin:0 auto;padding-block:24px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+.brand{font-family:var(--display);font-size:clamp(56px,18vw,92px);line-height:1;letter-spacing:.01em;color:var(--paper)}
+.tagline{font-size:18px;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:10px 20px;border-radius:6px;background:var(--paper);color:var(--ink);font-weight:700;font-size:17px;text-align:center}
+.btn.alt{background:transparent;color:var(--text);border:1.5px solid var(--line)}
+.btn.small{min-height:40px;padding:6px 12px;font-size:14px}
+.btn[disabled]{opacity:.5;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.row>.btn{flex:1 1 180px}
+.notice{padding:12px 14px;background:var(--night2);border:1px solid var(--line);border-radius:6px;color:var(--muted);font-size:15px}
+.err{color:var(--bad);font-size:15px}
+label{font-size:15px;color:var(--muted);display:block;margin-bottom:6px}
+input[type=text]{width:100%;min-height:52px;padding:10px 14px;border:1.5px solid var(--line);border-radius:6px;background:var(--night2);color:var(--text);font-size:18px}
+.classchip{align-self:flex-start;padding:3px 10px;border:1px solid var(--line);border-radius:4px;color:var(--muted);font-size:14px}
+.rules{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:16px}
+.rules b{color:var(--gold);font-family:var(--display);font-weight:400}
+
+/* 룰렛과 안내 */
+.stage{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));text-align:center}
+.wheelwrap{position:relative;width:min(84vw,56vh,430px);aspect-ratio:1;max-width:100%}
+.wheel{width:100%;height:100%;display:block}
+#wheelspin{transform-origin:200px 200px;transition:transform 3s cubic-bezier(.12,.78,.12,1)}
+.pin{position:absolute;left:50%;top:-5px;width:0;height:0;margin-left:-14px;border-left:14px solid transparent;border-right:14px solid transparent;border-top:26px solid var(--paper);filter:drop-shadow(0 2px 2px #0008)}
+.wedge{stroke:var(--night);stroke-width:2}
+.wlabel{font-family:var(--display);font-size:22px;fill:var(--ink)}
+.seg-ru{fill:var(--ru)} .seg-neo{fill:var(--neo)} .seg-dao{fill:var(--dao)} .seg-bud{fill:var(--bud)}
+.seg-used{fill:#46516b}
+.stagehead{font-family:var(--display);font-size:clamp(24px,7vw,36px);line-height:1.2;text-wrap:balance}
+.stagesub{color:var(--muted)}
+.count{font-family:var(--display);font-size:120px;line-height:1;color:var(--paper)}
+.who{font-family:var(--display);font-size:clamp(42px,14vw,72px);line-height:1.1}
+.tone-ru{color:var(--ru)} .tone-neo{color:var(--neo)} .tone-dao{color:var(--dao)} .tone-bud{color:var(--bud)}
+.tally{font-family:var(--display);font-size:48px;font-variant-numeric:tabular-nums}
+
+/* 게임 */
+.game{height:100%;max-width:640px;margin:0 auto;display:flex;flex-direction:column;background:var(--night)}
+.hud{display:grid;grid-template-columns:minmax(0,1.25fr) auto minmax(0,.85fr);align-items:center;gap:8px;padding-block:10px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));background:var(--night2);border-bottom:3px solid currentColor;flex:none}
+.hud-who{min-width:0;line-height:1.15;color:currentColor}
+.hud-who strong{display:block;font-family:var(--display);font-weight:400;font-size:clamp(17px,5.2vw,30px);white-space:nowrap}
+.hud-who span{font-size:12px;color:var(--muted)}
+.hud-time{text-align:center;line-height:1.1;color:var(--text)}
+.hud-time strong{display:block;font-family:var(--display);font-weight:400;font-size:28px;font-variant-numeric:tabular-nums}
+.hud-time span{font-size:12px;color:var(--muted)}
+.hud-score{text-align:right;line-height:1.1;color:var(--text)}
+.hud-score strong{display:block;font-family:var(--display);font-weight:400;font-size:28px;font-variant-numeric:tabular-nums}
+.hud-score span{font-size:12px;color:var(--muted);white-space:nowrap}
+.hud-score .hot{color:var(--gold)}
+.rain{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;background:linear-gradient(180deg,var(--night),var(--night2));}
+.rain::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--line)}
+.tile{position:absolute;left:0;top:0;min-width:92px;min-height:60px;padding:7px 14px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--paper);color:var(--ink);border-radius:4px;box-shadow:0 3px 0 #b9b19b;font-family:var(--word);line-height:1.2;text-align:center;will-change:transform;touch-action:none;-webkit-tap-highlight-color:transparent}
+.tile b{font-size:20px;font-weight:700;white-space:nowrap}
+.tile i{font-size:14px;font-style:normal;font-weight:500;color:#5a6277;white-space:nowrap}
+.tile.ok{background:var(--good);box-shadow:none;animation:ok .28s ease-out forwards}
+.tile.bad{background:var(--bad);box-shadow:none;animation:bad .3s ease-out forwards}
+.tile.ok i,.tile.bad i{color:var(--ink)}
+@keyframes ok{to{opacity:0;scale:1.25}}
+@keyframes bad{0%,50%{translate:-7px 0}25%,75%{translate:7px 0}100%{translate:0 0;opacity:0}}
+.pop{position:absolute;left:0;top:0;font-family:var(--display);font-size:24px;pointer-events:none;white-space:nowrap;animation:pop 1s ease-out forwards;text-shadow:0 2px 4px #000a}
+.pop.plus{color:var(--good)} .pop.minus{color:var(--bad)} .pop.combo{color:var(--gold);font-size:30px}
+@keyframes pop{0%{opacity:0;translate:0 8px}15%{opacity:1;translate:0 0}70%{opacity:1}100%{opacity:0;translate:0 -36px}}
+
+/* 결과 */
+.total{font-family:var(--display);font-size:72px;line-height:1;font-variant-numeric:tabular-nums;color:var(--paper)}
+.badges{display:flex;flex-wrap:wrap;gap:8px}
+.badge{padding:4px 10px;border-radius:4px;background:var(--panel);font-size:15px}
+.badge.best{background:var(--gold);color:var(--ink);font-weight:700}
+.round{display:flex;flex-direction:column;gap:10px;padding-block:16px;border-top:1px solid var(--line)}
+.round h2{font-family:var(--display);font-weight:400;font-size:26px;display:flex;justify-content:space-between;gap:12px}
+.wordrow{display:grid;grid-template-columns:7.4em minmax(0,1fr);gap:8px;font-size:15px}
+.wordrow>span:first-child{color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:5px 10px;font-family:var(--word)}
+.chips small{font-size:13px;color:var(--muted)}
+.none{color:var(--muted);font-family:var(--body)}
+.studyline{padding:12px 14px;background:var(--paper);color:var(--ink);border-radius:4px;font-weight:700}
+.save{font-size:14px;color:var(--muted)}
+
+/* 랭킹 */
+.rankhead h1{font-family:var(--display);font-weight:400;font-size:36px;line-height:1.1}
+.rankmeta{color:var(--muted);font-size:14px}
+.ranklist{display:flex;flex-direction:column}
+.rr{display:grid;grid-template-columns:3.3em minmax(0,1fr) auto;align-items:center;gap:8px;padding:10px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;background:var(--night)}
+.rr .n{font-family:var(--display);font-size:22px;color:var(--muted)}
+.rr .name{font-size:20px;min-width:0;overflow-wrap:anywhere}
+.rr .pts{font-family:var(--display);font-size:24px}
+.rr.top1 .n,.rr.top1 .pts{color:var(--gold)}
+.rr.top2 .n{color:#d9dfe9}.rr.top3 .n{color:#e3a875}
+.rr.me{background:var(--paper);color:var(--ink);border-radius:4px}
+.rr.me .n{color:var(--ink)}
+.rr .up{color:var(--good);font-size:.75em;margin-left:6px}
+.empty{padding:36px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:6px}
+
+/* 칠판 */
+.board{height:100%;display:flex;flex-direction:column;gap:2vh;padding-block:3vh;padding-left:max(3vw,env(safe-area-inset-left,0px));padding-right:max(3vw,env(safe-area-inset-right,0px));overflow:hidden}
+.boardhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 24px;flex:none}
+.boardhead h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,6vh,72px);line-height:1;color:var(--paper)}
+.boardhead p{color:var(--muted);font-size:clamp(14px,2.2vh,24px)}
+.boardgrid{flex:1;min-height:0;display:grid;grid-auto-flow:column;gap:0 3vw;align-content:stretch}
+.boardgrid .rr{min-height:0;padding:0 1vw;font-size:var(--bfs,3.5vh);grid-template-columns:2em minmax(0,1fr) auto}
+.boardgrid .rr .n{font-size:1em}.boardgrid .rr .name{font-size:1em}.boardgrid .rr .pts{font-size:1.15em}
+
+/* 설정 */
+.setup h1{font-family:var(--display);font-weight:400;font-size:40px;line-height:1.1}
+.setup h2{font-family:var(--display);font-weight:400;font-size:24px;line-height:1.2}
+.step{display:flex;flex-direction:column;gap:10px;padding-block:18px;border-top:1px solid var(--line)}
+.step ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:6px}
+.step code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background:var(--panel);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+.classrow{display:flex;gap:8px;align-items:center}
+.classrow input{flex:1;min-width:0}
+.linkcard{display:flex;flex-direction:column;gap:10px;padding:14px;background:var(--night2);border:1px solid var(--line);border-radius:6px}
+.linkcard h3{font-family:var(--display);font-weight:400;font-size:22px}
+.linktext{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.qr{align-self:center;background:#fff;padding:12px;border-radius:4px;line-height:0}
+.qr svg,.qr img{width:min(70vw,300px);height:auto;display:block}
+details{border-top:1px solid var(--line);padding-block:12px}
+summary{cursor:pointer;font-weight:700}
+.wordtable{margin-top:10px;display:flex;flex-direction:column;gap:12px;font-size:15px}
+.wordtable h3{font-size:16px;font-weight:700}
+.wordtable p{color:var(--muted)}
+@media (prefers-reduced-motion:reduce){
+  #wheelspin{transition-duration:.2s}
+  .tile.ok,.tile.bad{animation-duration:.01s}
+  .pop{animation-name:fadeonly}
+}
+@keyframes fadeonly{0%,70%{opacity:1}100%{opacity:0}}
+</style>
+
+<div id="app"></div>
+
+<script>
+"use strict";
+document.documentElement.lang = "ko";
+var PREVIEW = false; /*__PREVIEW__*/
+var CODE_GS = "/** @OnlyCurrentDoc */\n/**\n * 중꺾사 점수 기록 코드\n * 이 코드는 선생님의 구글 시트 안에서만 동작합니다.\n * 학생 이름과 점수는 이 시트의 '기록' 탭에 저장됩니다.\n * 수업과 시상이 끝나면 '기록' 탭의 2행부터 지워 주세요.\n */\nvar JKK_TAB = '기록';\nvar JKK_HEAD = ['기록 시각', '수업', '이름', '총점', '도전 횟수', '사상가1', '점수1', '사상가2', '점수2', '사상가3', '점수3', '기록번호'];\nvar JKK_THINKERS = ['공자', '맹자', '순자', '주희', '왕수인', '노자', '장자', '석가모니'];\nvar JKK_CACHE_SECONDS = 8;\n\nfunction doGet(e) {\n  var p = (e && e.parameter) || {};\n  if (p.action === 'ping') return jkkJson_({ ok: true, app: 'jungkkeoksa', version: 1 });\n  if (p.action === 'ranking') {\n    var cls = String(p['class'] || '');\n    if (!jkkValidClass_(cls)) return jkkJson_({ ok: false, error: 'bad_class' });\n    return jkkJson_({ ok: true, ranking: jkkCachedRanking_(cls) });\n  }\n  return jkkJson_({ ok: false, error: 'bad_action' });\n}\n\nfunction doPost(e) {\n  var body;\n  try {\n    body = JSON.parse(e.postData.contents);\n  } catch (err) {\n    return jkkJson_({ ok: false, error: 'bad_json' });\n  }\n  var problem = jkkValidate_(body);\n  if (problem) return jkkJson_({ ok: false, error: problem });\n\n  var lock = LockService.getScriptLock();\n  if (!lock.tryLock(20000)) return jkkJson_({ ok: false, error: 'busy', retry: true });\n  try {\n    var sheet = jkkSheet_();\n    var rows = jkkRows_(sheet);\n    var alreadySaved = rows.some(function (r) { return String(r[11]) === body.id; });\n    var attempts = rows.filter(function (r) { return String(r[1]) === body['class'] && String(r[2]) === body.name; });\n    var previousBest = attempts.reduce(function (best, r) { return Math.max(best, Number(r[3]) || 0); }, -1);\n\n    if (!alreadySaved) {\n      var row = [new Date(), body['class'], body.name, body.score, attempts.length + 1];\n      body.rounds.forEach(function (x) { row.push(x.thinker, x.score); });\n      row.push(body.id);\n      var next = sheet.getLastRow() + 1;\n      if (next > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), 200);\n      // '3-1' 같은 수업 이름이 날짜로 바뀌지 않도록 글자 형식으로 저장한다.\n      sheet.getRange(next, 2, 1, 2).setNumberFormat('@');\n      sheet.getRange(next, 1, 1, row.length).setValues([row]);\n      rows.push(row);\n    }\n    jkkClearCache_(body['class']);\n\n    var ranking = jkkRanking_(rows, body['class']);\n    var mine = ranking.filter(function (x) { return x.name === body.name; })[0];\n    return jkkJson_({\n      ok: true,\n      rank: mine ? mine.rank : null,\n      best: mine ? mine.score : body.score,\n      participants: ranking.length,\n      isNewBest: !alreadySaved && body.score > previousBest\n    });\n  } finally {\n    lock.releaseLock();\n  }\n}\n\nfunction jkkValidate_(b) {\n  if (!b || typeof b !== 'object') return 'bad_body';\n  if (!jkkValidClass_(String(b['class'] || ''))) return 'bad_class';\n  if (!/^[가-힣]{2,5}$/.test(String(b.name || ''))) return 'bad_name';\n  if (!/^[A-Za-z0-9-]{8,40}$/.test(String(b.id || ''))) return 'bad_id';\n  if (typeof b.score !== 'number' || Math.floor(b.score) !== b.score || b.score \u003c 0 || b.score > 48) return 'bad_score';\n  if (!Array.isArray(b.rounds) || b.rounds.length !== 3) return 'bad_rounds';\n  var sum = 0, seen = {};\n  for (var i = 0; i \u003c 3; i++) {\n    var x = b.rounds[i] || {};\n    if (JKK_THINKERS.indexOf(x.thinker) \u003c 0 || seen[x.thinker]) return 'bad_rounds';\n    if (typeof x.score !== 'number' || Math.floor(x.score) !== x.score || x.score \u003c -12 || x.score > 16) return 'bad_rounds';\n    seen[x.thinker] = true;\n    sum += x.score;\n  }\n  return sum === b.score ? '' : 'bad_rounds';\n}\n\nfunction jkkValidClass_(c) {\n  return /^[가-힣A-Za-z0-9][가-힣A-Za-z0-9 ·_-]{0,19}$/.test(c);\n}\n\nfunction jkkSheet_() {\n  var book = SpreadsheetApp.getActiveSpreadsheet();\n  var sheet = book.getSheetByName(JKK_TAB);\n  if (!sheet) {\n    sheet = book.insertSheet(JKK_TAB);\n  }\n  // 탭을 새로 만들었거나 제목 줄까지 지운 경우 제목 줄을 다시 넣는다.\n  if (sheet.getLastRow() === 0) {\n    sheet.appendRow(JKK_HEAD);\n    sheet.setFrozenRows(1);\n  }\n  return sheet;\n}\n\nfunction jkkRows_(sheet) {\n  var count = sheet.getLastRow();\n  if (count \u003c 2) return [];\n  return sheet.getRange(2, 1, count - 1, JKK_HEAD.length).getValues();\n}\n\nfunction jkkRanking_(rows, cls) {\n  var best = {};\n  rows.forEach(function (r) {\n    if (String(r[1]) !== cls || !r[2]) return;\n    var score = Number(r[3]) || 0;\n    var time = new Date(r[0]).getTime();\n    var old = best[r[2]];\n    if (!old || score > old.score || (score === old.score && time \u003c old.time)) {\n      best[r[2]] = { name: r[2], score: score, time: time };\n    }\n  });\n  return Object.keys(best)\n    .map(function (k) { return best[k]; })\n    .sort(function (a, b) { return b.score - a.score || a.time - b.time; })\n    .map(function (x, i) { return { rank: i + 1, name: x.name, score: x.score }; });\n}\n\nfunction jkkCacheKey_(cls) {\n  return 'rank_' + Utilities.base64EncodeWebSafe(cls);\n}\n\nfunction jkkClearCache_(cls) {\n  CacheService.getScriptCache().remove(jkkCacheKey_(cls));\n}\n\nfunction jkkCachedRanking_(cls) {\n  var cache = CacheService.getScriptCache();\n  var key = jkkCacheKey_(cls);\n  var hit = cache.get(key);\n  if (hit) return JSON.parse(hit);\n  var ranking = jkkRanking_(jkkRows_(jkkSheet_()), cls);\n  cache.put(key, JSON.stringify(ranking), JKK_CACHE_SECONDS);\n  return ranking;\n}\n\nfunction jkkJson_(data) {\n  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);\n}\n";    /*__CODE_GS__*/
+
+var THINKERS = [
+  { id:"gong",  name:"공자",     label:"공자",           tone:"ru"  },
+  { id:"meng",  name:"맹자",     label:"맹자",           tone:"ru"  },
+  { id:"sun",   name:"순자",     label:"순자",           tone:"ru"  },
+  { id:"zhu",   name:"주희",     label:"주희",           tone:"neo" },
+  { id:"wang",  name:"왕수인",   label:"왕수인(양명)",   tone:"neo" },
+  { id:"lao",   name:"노자",     label:"노자",           tone:"dao" },
+  { id:"zhuang",name:"장자",     label:"장자",           tone:"dao" },
+  { id:"buddha",name:"석가모니", label:"석가모니(불교)", tone:"bud" }
+];
+
+var ANSWERS = {
+  gong:"인격적 주재천,인,예,극기복례,충,서,추기급인,중용,군자,위기지학,예치,정명론,덕치,수기안인,대동사회",
+  meng:"천인합일,성선설,사덕,사단,측은지심,불인지심,양지,존심양성,구방심,집의,호연지기,대장부,왕도정치,항산,역성혁명",
+  sun:"자연천,천인분이,성악설,호리,이목지욕,예,화성기위,체도,찰도,성위지합,예치,왕도정치,패도정치,선례후법,군거화일",
+  zhu:"이기론,이기불상리,이기불상잡,이일분수,성즉리,본연지성,기질지성,심통성정,존천리거인욕,거경궁리,존양성찰,정제엄숙,격물치지,선지후행,중행경지",
+  wang:"심즉천,심외무리,심외무물,심즉리,심체,의념,양지,양능,치양지,격심,사상마련,지행합일,진지,격물치지,존천리거인욕",
+  lao:"무위자연,자존,상덕,일손법,위도,허정,복명,소박,상선약수,부쟁,겸허,이만물,유약,무위지치,소국과민",
+  zhuang:"무위자연,자존,소박,좌망,심재,망아,허실생백,소요유,제물,만물제동,물아일체,안명,지인,진인,무위",
+  buddha:"연기설,윤회,오온,불성,무명,삼독,삼학,사성제,중도,팔정도,제행무상,제법무아,자비,해탈,보살"
+};
+var WRONGS = {
+  gong:"사단,구방심,집의,호연지기,항산,자연천,성악설,화성기위,패도정치,선례후법,성즉리,소국과민,좌망,연기설,제행무상",
+  meng:"자연천,천인분이,성악설,화성기위,군거화일,이기론,이기불상리,이일분수,무위지치,소국과민,좌망,소요유,연기설,제행무상,팔정도",
+  sun:"인격적 주재천,천인합일,성선설,사단,양지,호연지기,구방심,성즉리,심즉리,치양지,무위지치,상선약수,좌망,삼학,연기설",
+  zhu:"심즉리,심외무리,심외무물,치양지,지행합일,자연천,천인분이,성악설,무위지치,소국과민,좌망,소요유,연기설,제행무상,팔정도",
+  wang:"이기론,이일분수,성즉리,거경궁리,선지후행,자연천,천인분이,성악설,무위지치,소국과민,좌망,소요유,연기설,제행무상,팔정도",
+  lao:"극기복례,정명론,예치,성선설,사단,호연지기,성악설,화성기위,이기론,성즉리,거경궁리,심즉리,연기설,사성제,팔정도",
+  zhuang:"극기복례,수기안인,대동사회,성선설,구방심,역성혁명,성악설,선례후법,이일분수,존천리거인욕,격물치지,지행합일,윤회,삼학,불성",
+  buddha:"정명론,덕치,예치,호연지기,왕도정치,역성혁명,성악설,화성기위,선례후법,이기론,거경궁리,지행합일,무위지치,소국과민,상선약수"
+};
+var HANJA = {
+  "인격적 주재천":"人格的 主宰天","인":"仁","예":"禮","극기복례":"克己復禮","충":"忠","서":"恕","추기급인":"推己及人","중용":"中庸","군자":"君子","위기지학":"爲己之學","예치":"禮治","정명론":"正名論","덕치":"德治","수기안인":"修己安人","대동사회":"大同社會",
+  "천인합일":"天人合一","성선설":"性善說","사덕":"四德","사단":"四端","측은지심":"惻隱之心","불인지심":"不忍之心","양지":"良知","존심양성":"存心養性","구방심":"求放心","집의":"集義","호연지기":"浩然之氣","대장부":"大丈夫","왕도정치":"王道政治","항산":"恒産","역성혁명":"易姓革命",
+  "자연천":"自然天","천인분이":"天人分二","성악설":"性惡說","호리":"好利","이목지욕":"耳目之慾","화성기위":"化性起僞","체도":"體道","찰도":"察道","성위지합":"性僞之合","패도정치":"覇道政治","선례후법":"先禮後法","군거화일":"群居和一",
+  "이기론":"理氣論","이기불상리":"理氣不相離","이기불상잡":"理氣不相雜","이일분수":"理一分殊","성즉리":"性卽理","본연지성":"本然之性","기질지성":"氣質之性","심통성정":"心統性情","존천리거인욕":"存天理去人欲","거경궁리":"居敬窮理","존양성찰":"存養省察","정제엄숙":"整齊嚴肅","격물치지":"格物致知","선지후행":"先知後行","중행경지":"重行輕知",
+  "심즉천":"心卽天","심외무리":"心外無理","심외무물":"心外無物","심즉리":"心卽理","심체":"心體","의념":"意念","양능":"良能","치양지":"致良知","격심":"格心","사상마련":"事上磨鍊","지행합일":"知行合一","진지":"眞知",
+  "무위자연":"無爲自然","자존":"自存","상덕":"上德","일손법":"日損法","위도":"爲道","허정":"虛靜","복명":"復命","소박":"素朴","상선약수":"上善若水","부쟁":"不爭","겸허":"謙虛","이만물":"利萬物","유약":"柔弱","무위지치":"無爲之治","소국과민":"小國寡民",
+  "좌망":"坐忘","심재":"心齋","망아":"忘我","허실생백":"虛室生白","소요유":"逍遙遊","제물":"齊物","만물제동":"萬物齊同","물아일체":"物我一體","안명":"安命","지인":"至人","진인":"眞人","무위":"無爲",
+  "연기설":"緣起說","윤회":"輪廻","오온":"五蘊","불성":"佛性","무명":"無明","삼독":"三毒","삼학":"三學","사성제":"四聖諦","중도":"中道","팔정도":"八正道","제행무상":"諸行無常","제법무아":"諸法無我","자비":"慈悲","해탈":"解脫","보살":"菩薩"
+};
+function list(s){ return s.split(","); }
+function byId(id){ return THINKERS.filter(function(t){return t.id===id;})[0]; }
+
+var ROUND_MS = 60000, PICK_WORDS = 12, TOTAL_THINKERS = 3;
+var app = document.getElementById("app");
+var viewToken = 0;
+function newView(){ viewToken++; window.scrollTo(0,0); return viewToken; }
+function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+function shuffled(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t;} return a; }
+function sleep(ms){ return new Promise(function(r){setTimeout(r,ms);}); }
+function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
+function wordHtml(w){ return esc(w)+"<small>("+esc(HANJA[w])+")</small>"; }
+
+/* 접속 정보 */
+var params = (function(){
+  try { return new URLSearchParams(location.search); } catch(e){ return new URLSearchParams(""); }
+})();
+var SHEET_ID = params.get("s") || "";
+var CLASS_NAME = params.get("class") || "";
+var VIEW = params.get("view") || "";
+var player = { name:"", cls:CLASS_NAME, demo:false };
+
+function apiUrl(id){ return "https://script.google.com/macros/s/"+id+"/exec"; }
+function timedFetch(url,opt,ms){
+  var c = new AbortController(), t = setTimeout(function(){c.abort();},ms||20000);
+  opt = opt||{}; opt.signal = c.signal;
+  return fetch(url,opt).finally(function(){clearTimeout(t);});
+}
+function sheetRanking(id,cls){
+  return timedFetch(apiUrl(id)+"?action=ranking&class="+encodeURIComponent(cls)+"&_="+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(d){ if(!d.ok) throw new Error(d.error||"ranking"); return d.ranking; });
+}
+function sheetSave(id,data){
+  return timedFetch(apiUrl(id),{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(data),redirect:"follow"})
+    .then(function(r){return r.json();})
+    .then(function(d){ if(!d.ok){ var e=new Error(d.error||"save"); e.retry=!!d.retry; throw e; } return d; });
+}
+
+/* 체험용 예시 랭킹: 실제 학생 기록이 아니며 화면에도 예시라고 표시한다. */
+var DEMO = { best:-1, rows:[["이서연",42],["박지호",39],["최유진",36],["정하늘",33],["한도윤",27],["오세아",24],["윤태민",19],["강나래",14]] };
+function demoRanking(){
+  var rows = DEMO.rows.slice();
+  if (DEMO.best>=0) rows.push([player.name||"나",DEMO.best]);
+  rows.sort(function(a,b){return b[1]-a[1];});
+  return rows.map(function(r,i){return {rank:i+1,name:r[0],score:r[1]};});
+}
+function saveScore(data){
+  if (player.demo){
+    var isNew = data.score>DEMO.best;
+    if (isNew) DEMO.best = data.score;
+    var ranking = demoRanking();
+    var mine = ranking.filter(function(x){return x.name===player.name;})[0];
+    return Promise.resolve({ok:true,rank:mine.rank,best:DEMO.best,participants:ranking.length,isNewBest:isNew});
+  }
+  return sheetSave(SHEET_ID,data);
+}
+function loadRanking(){ return player.demo ? Promise.resolve(demoRanking()) : sheetRanking(SHEET_ID,player.cls); }
+
+/* ---------- 첫 화면 ---------- */
+function showHome(){
+  newView();
+  app.innerHTML = '<main class="page">'
+    +'<h1 class="brand">중꺾사</h1>'
+    +'<p class="tagline">중요한 건 꺾이지 않는 사상</p>'
+    +'<p>동양 윤리 사상가 8명의 개념 단어가 비처럼 내려와요. 룰렛에 뽑힌 사상가의 단어만 터치하세요.</p>'
+    +rulesHtml()
+    +'<div class="row"><button class="btn" id="tryBtn" type="button">게임 체험하기</button>'
+    +'<button class="btn alt" id="boardBtn" type="button">칠판 랭킹 보기(예시)</button></div>'
+    +'<button class="btn alt" id="setupBtn" type="button">선생님 설정: 시트 연결, 링크와 QR코드 만들기</button>'
+    +(PREVIEW?'<p class="notice">이 화면은 체험판이에요. 점수는 저장되지 않고, 랭킹의 다른 이름은 예시예요. 실제 수업용 랭킹은 GitHub에 올린 주소에서 시트를 연결해야 작동해요.</p>'
+             :'<p class="notice">체험에서는 점수가 저장되지 않고, 랭킹의 다른 이름은 예시예요.</p>')
+    +'</main>';
+  document.getElementById("tryBtn").onclick = function(){ player.demo=true; player.cls="체험"; showStart(); };
+  document.getElementById("boardBtn").onclick = function(){ player.demo=true; player.cls="체험"; showBoard(); };
+  document.getElementById("setupBtn").onclick = showSetup;
+}
+function rulesHtml(){
+  return '<div class="rules"><b>+1</b><span>맞는 단어를 터치</span><b>−1</b><span>다른 사상가의 단어를 터치</span><b>+1</b><span>콤보: 연속 3개를 맞힐 때마다 추가</span><b>60초</b><span>사상가 한 명의 시간, 한 판에 3명</span></div>';
+}
+
+/* ---------- 이름 입력 ---------- */
+function showStart(){
+  newView();
+  app.innerHTML = '<main class="page">'
+    +'<h1 class="brand">중꺾사</h1>'
+    +(player.cls&&!player.demo?'<span class="classchip">'+esc(player.cls)+'</span>':'')
+    +rulesHtml()
+    +'<div id="nameForm"><label for="nameInput">이름을 성까지 모두 입력하세요</label>'
+    +'<input id="nameInput" type="text" autocomplete="off" maxlength="12" placeholder="예: 김민수">'
+    +'<p class="err" id="nameErr" role="alert"></p>'
+    +'<div class="row" style="margin-top:12px"><button class="btn" id="startBtn" type="button">시작</button></div></div>'
+    +'<div id="confirmBox"></div>'
+    +(player.demo?'<p class="notice">체험 모드예요. 점수는 저장되지 않아요.</p>':'')
+    +'</main>';
+  document.getElementById("nameInput").addEventListener("keydown",function(e){
+    if(e.key==="Enter"&&!e.isComposing){ e.preventDefault(); submitName(); }
+  });
+  document.getElementById("startBtn").onclick = submitName;
+  function submitName(){
+    var name = document.getElementById("nameInput").value.replace(/\s+/g,"");
+    var err = document.getElementById("nameErr");
+    if (!/^[가-힣]{2,5}$/.test(name)){ err.textContent = "한글 이름 2~5자를 성까지 입력해 주세요."; return; }
+    err.textContent = "";
+    var box = document.getElementById("confirmBox");
+    box.innerHTML = '<div class="notice" style="color:var(--text)"><p style="font-size:20px;margin-bottom:10px"><b>'+esc(name)+'</b> 맞나요?</p>'
+      +'<div class="row"><button class="btn" id="yesBtn" type="button">맞아요, 시작</button><button class="btn alt" id="noBtn" type="button">다시 입력</button></div></div>';
+    document.getElementById("yesBtn").onclick = function(){ player.name=name; playMatch(); };
+    document.getElementById("noBtn").onclick = function(){ box.innerHTML=""; document.getElementById("nameInput").focus(); };
+    document.getElementById("yesBtn").focus();
+    box.scrollIntoView({block:"center"});
+  }
+}
+
+/* ---------- 사상가 뽑기 ---------- */
+function pickThinker(usedIds){
+  var seen; try{ seen = JSON.parse(store("jkk_seen")||"[]"); }catch(e){ seen=[]; }
+  var open = THINKERS.filter(function(t){return usedIds.indexOf(t.id)<0;});
+  var fresh = open.filter(function(t){return seen.indexOf(t.id)<0;});
+  if (!fresh.length){ seen = usedIds.slice(); fresh = open; }
+  var t = fresh[Math.floor(Math.random()*fresh.length)];
+  seen.push(t.id);
+  store("jkk_seen",JSON.stringify(seen));
+  return t;
+}
+function wheelSvg(usedIds){
+  var cx=200,cy=200,r=196,out="";
+  THINKERS.forEach(function(t,i){
+    var a0=(i*45-90)*Math.PI/180,a1=((i+1)*45-90)*Math.PI/180;
+    var x0=cx+r*Math.cos(a0),y0=cy+r*Math.sin(a0),x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1);
+    var mid=i*45+22.5,cls=usedIds.indexOf(t.id)>=0?"seg-used":"seg-"+t.tone;
+    out+='<path class="wedge '+cls+'" d="M'+cx+' '+cy+'L'+x0.toFixed(2)+' '+y0.toFixed(2)+'A'+r+' '+r+' 0 0 1 '+x1.toFixed(2)+' '+y1.toFixed(2)+'Z"/>';
+    out+='<text class="wlabel" text-anchor="middle" dominant-baseline="middle" transform="rotate('+mid+' '+cx+' '+cy+') translate('+cx+' '+(cy-132)+')">'+esc(t.name)+'</text>';
+  });
+  out+='<circle cx="200" cy="200" r="24" fill="#0f1830" stroke="#f3efe3" stroke-width="3"/>';
+  return '<svg class="wheel" viewBox="0 0 400 400" role="img" aria-label="사상가 룰렛"><g id="wheelspin">'+out+'</g></svg>';
+}
+function spinWheel(usedIds,thinker,order,tok){
+  app.innerHTML = '<main class="stage"><p class="stagesub">'+order+' / '+TOTAL_THINKERS+'번째 사상가</p>'
+    +'<h1 class="stagehead">누구의 단어일까요?</h1>'
+    +'<div class="wheelwrap"><div class="pin"></div>'+wheelSvg(usedIds)+'</div></main>';
+  var idx = THINKERS.indexOf(thinker);
+  var target = 360*5 - (idx*45+22.5) + (Math.random()*20-10);
+  var g = document.getElementById("wheelspin");
+  void g.getBoundingClientRect();
+  requestAnimationFrame(function(){ g.style.transform = "rotate("+target+"deg)"; });
+  return sleep(3200).then(function(){ return tok===viewToken; });
+}
+function countdown(thinker,tok){
+  var steps=["3","2","1"];
+  function step(i){
+    if (tok!==viewToken) return Promise.resolve(false);
+    if (i>=steps.length) return Promise.resolve(true);
+    app.innerHTML = '<main class="stage"><p class="who tone-'+thinker.tone+'">'+esc(thinker.label)+'</p>'
+      +'<h1 class="stagehead">이 사상가의 단어를 찾으세요!</h1><p class="count">'+steps[i]+'</p></main>';
+    return sleep(800).then(function(){return step(i+1);});
+  }
+  return step(0);
+}
+
+/* ---------- 한 사상가 판 ---------- */
+function buildWords(t){
+  var yes = shuffled(list(ANSWERS[t.id])).slice(0,PICK_WORDS).map(function(w){return {w:w,ok:true};});
+  var no  = shuffled(list(WRONGS[t.id])).slice(0,PICK_WORDS).map(function(w){return {w:w,ok:false};});
+  var seq = yes.concat(no);
+  for (var tries=0;tries<200;tries++){
+    seq = shuffled(seq);
+    var run=1,good=true;
+    for (var i=1;i<seq.length;i++){ run = seq[i].ok===seq[i-1].ok ? run+1 : 1; if(run>3){good=false;break;} }
+    if (good) break;
+  }
+  return seq;
+}
+function playThinker(t,order,totalBefore,tok){
+  return new Promise(function(resolve){
+    var seq = buildWords(t);
+    var res = { thinker:t, score:0, hit:[], wrong:[], missed:[] };
+    var total = totalBefore, streak = 0;
+    app.innerHTML = '<main class="game">'
+      +'<header class="hud tone-'+t.tone+'">'
+      +'<div class="hud-who"><strong>'+esc(t.label)+'</strong><span>의 단어를 찾으세요</span></div>'
+      +'<div class="hud-time"><strong id="hudTime">60</strong><span>남은 초 · '+order+'/'+TOTAL_THINKERS+'</span></div>'
+      +'<div class="hud-score"><strong id="hudScore">'+total+'</strong><span id="hudStreak">연속 0</span></div>'
+      +'</header><section class="rain" id="rain" aria-label="내려오는 단어"></section></main>';
+    var rain = document.getElementById("rain");
+    var hudTime = document.getElementById("hudTime"), hudScore = document.getElementById("hudScore"), hudStreak = document.getElementById("hudStreak");
+    var W = rain.clientWidth, H = rain.clientHeight;
+    var startFall=7, endFall=5, tileH=64;
+    function speed(ms){ return (H+tileH)/(startFall-(startFall-endFall)*ms/ROUND_MS)/1000; }
+
+    /* 마지막 단어도 시간 안에 바닥까지 내려오도록 출발 시각을 계산한다. */
+    var lastSpawn = ROUND_MS, dist=0;
+    while (lastSpawn>0 && dist<H+tileH){ lastSpawn-=50; dist+=speed(lastSpawn)*50; }
+    var first=600, ivs=[], sum=0;
+    for (var i=0;i<seq.length-1;i++){ var iv=1-.28*i/(seq.length-2); ivs.push(iv); sum+=iv; }
+    var scale=(lastSpawn-first)/sum, at=first;
+    seq.forEach(function(s,i){ s.at=at; if(i<ivs.length) at+=ivs[i]*scale; });
+
+    var live=[], next=0, lastZone=-1, begun=performance.now(), prev=begun, rafId=0;
+    function pop(x,y,text,cls){
+      var p=document.createElement("div"); p.className="pop "+cls; p.textContent=text;
+      rain.appendChild(p);
+      var w=p.offsetWidth;
+      p.style.left=Math.max(4,Math.min(W-w-4,x-w/2))+"px"; p.style.top=Math.max(4,y)+"px";
+      setTimeout(function(){p.remove();},1000);
+    }
+    function touch(o){
+      if (o.done||tok!==viewToken) return;
+      o.done=true;
+      var cx=o.x+o.el.offsetWidth/2, cy=o.y;
+      if (o.ok){
+        streak++;
+        var gain=1, bonus=streak%3===0;
+        if (bonus) gain=2;
+        total+=gain; res.score+=gain; res.hit.push(o.w);
+        o.el.classList.add("ok");
+        pop(cx,cy,"+1","plus");
+        if (bonus) pop(cx,cy-34,streak+" 콤보! +1","combo");
+      } else {
+        streak=0;
+        var after=Math.max(0,total-1), lost=total-after;
+        total=after; res.score-=lost; res.wrong.push(o.w);
+        o.el.classList.add("bad");
+        pop(cx,cy,lost?"−1":"0","minus");
+      }
+      hudScore.textContent=total;
+      hudStreak.textContent="연속 "+streak;
+      hudStreak.className=streak%3===2?"hot":"";
+      setTimeout(function(){o.el.remove();},320);
+    }
+    function spawn(s){
+      var el=document.createElement("div");
+      el.className="tile"; el.setAttribute("role","button"); el.dataset.word=s.w;
+      el.innerHTML="<b>"+esc(s.w)+"</b><i>"+esc(HANJA[s.w])+"</i>";
+      rain.appendChild(el);
+      var w=el.offsetWidth,h=el.offsetHeight,pad=8,room=Math.max(0,W-w-pad*2);
+      var zone; do{ zone=Math.floor(Math.random()*3); }while(zone===lastZone);
+      lastZone=zone;
+      var x=pad+room*(zone+Math.random())/3;
+      var o={w:s.w,ok:s.ok,el:el,x:x,y:-h,done:false};
+      el.style.transform="translate3d("+x+"px,"+o.y+"px,0)";
+      el.addEventListener("pointerdown",function(e){e.preventDefault();touch(o);});
+      live.push(o);
+    }
+    function finish(){
+      cancelAnimationFrame(rafId);
+      live.forEach(function(o){ if(!o.done&&o.ok) res.missed.push(o.w); });
+      seq.slice(next).forEach(function(s){ if(s.ok) res.missed.push(s.w); });
+      resolve({res:res,total:total});
+    }
+    function frame(now){
+      if (tok!==viewToken) return;
+      var ms=now-begun, dt=now-prev; prev=now;
+      W=rain.clientWidth; H=rain.clientHeight;
+      if (ms>=ROUND_MS){ hudTime.textContent="0"; finish(); return; }
+      hudTime.textContent=Math.ceil((ROUND_MS-ms)/1000);
+      while(next<seq.length&&seq[next].at<=ms){
+        var s=seq[next++];
+        /* 화면이 잠시 가려져 지나간 단어는 내려온 것으로 치고 놓친 단어에 넣는다. */
+        if (ms-s.at<1500) spawn(s); else if(s.ok) res.missed.push(s.w);
+      }
+      var dy=speed(ms)*dt;
+      live=live.filter(function(o){
+        if (o.done) return false;
+        o.y+=dy;
+        if (o.x+o.el.offsetWidth>W-4) o.x=Math.max(4,W-o.el.offsetWidth-4);
+        if (o.y>=H){ if(o.ok) res.missed.push(o.w); o.el.remove(); return false; }
+        o.el.style.transform="translate3d("+o.x+"px,"+o.y+"px,0)";
+        return true;
+      });
+      rafId=requestAnimationFrame(frame);
+    }
+    rafId=requestAnimationFrame(frame);
+  });
+}
+function showTally(t,score,total,hasNext,tok){
+  app.innerHTML='<main class="stage"><p class="who tone-'+t.tone+'">'+esc(t.label)+'</p>'
+    +'<p class="tally">'+(score>0?"+":"")+score+'점</p><p class="stagesub">지금까지 총 '+total+'점'+(hasNext?' · 다음 사상가를 뽑아요':'')+'</p></main>';
+  return sleep(2000).then(function(){return tok===viewToken;});
+}
+function playMatch(){
+  var tok=newView();
+  var used=[],rounds=[],total=0;
+  var id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():("j"+Date.now()+"-"+Math.floor(Math.random()*1e9));
+  function next(){
+    if (rounds.length===TOTAL_THINKERS){ showResult({id:id,rounds:rounds,total:total}); return; }
+    var order=rounds.length+1, t=pickThinker(used);
+    spinWheel(used,t,order,tok).then(function(alive){
+      if(!alive) return;
+      used.push(t.id);
+      return countdown(t,tok).then(function(ok){
+        if(!ok) return;
+        return playThinker(t,order,total,tok).then(function(out){
+          rounds.push(out.res); total=out.total;
+          return showTally(t,out.res.score,total,rounds.length<TOTAL_THINKERS,tok);
+        }).then(function(alive2){ if(alive2) next(); });
+      });
+    });
+  }
+  next();
+}
+
+function homeBtnHtml(){ return player.demo?'<button class="btn alt" id="homeBtn" type="button">처음으로</button>':''; }
+function bindHomeBtn(){ var b=document.getElementById("homeBtn"); if(b) b.onclick=showHome; }
+
+/* ---------- 결과 ---------- */
+function wordRow(label,words){
+  return '<div class="wordrow"><span>'+label+'</span><div class="chips">'
+    +(words.length?words.map(function(w){return '<span>'+wordHtml(w)+'</span>';}).join(""):'<span class="none">없음</span>')+'</div></div>';
+}
+function showResult(match){
+  newView();
+  app.innerHTML='<main class="page">'
+    +'<p class="stagesub">'+esc(player.name)+' 님의 결과</p>'
+    +'<p class="total">'+match.total+'점</p>'
+    +'<div class="badges" id="badges"></div>'
+    +'<p class="save" id="saveMsg" role="status">기록을 저장하고 있어요.</p>'
+    +match.rounds.map(function(r){
+      return '<section class="round"><h2><span class="tone-'+r.thinker.tone+'">'+esc(r.thinker.label)+'</span><span>'+r.score+'점</span></h2>'
+        +wordRow("⭕ 맞힌 단어",r.hit)+wordRow("❌ 틀린 단어",r.wrong)+wordRow("⚠️ 놓친 단어",r.missed)+'</section>';
+    }).join("")
+    +'<p class="studyline">틀린 단어와 놓친 단어를 학습지에서 찾아보세요!</p>'
+    +'<div class="row"><button class="btn" id="rankBtn" type="button">랭킹 보기</button><button class="btn alt" id="againBtn" type="button">다시 도전</button></div>'
+    +homeBtnHtml()+'</main>';
+  bindHomeBtn();
+  document.getElementById("rankBtn").onclick=showRank;
+  document.getElementById("againBtn").onclick=playMatch;
+  var tok=viewToken, tries=0;
+  var data={"class":player.cls,name:player.name,id:match.id,score:match.total,
+    rounds:match.rounds.map(function(r){return {thinker:r.thinker.name,score:r.score};})};
+  var msg=document.getElementById("saveMsg");
+  function attempt(){
+    if(tok!==viewToken) return;
+    tries++;
+    saveScore(data).then(function(d){
+      if(tok!==viewToken) return;
+      msg.textContent=player.demo?"체험 모드라 실제로 저장되지는 않았어요.":"기록을 저장했어요.";
+      var b=document.getElementById("badges");
+      b.innerHTML=(d.isNewBest?'<span class="badge best">내 최고 기록 갱신!</span>':'<span class="badge">내 최고 기록 '+d.best+'점</span>')
+        +(d.rank?'<span class="badge">현재 '+esc(player.cls)+' '+d.rank+'위 / '+d.participants+'명</span>':'');
+    }).catch(function(){
+      if(tok!==viewToken) return;
+      if(tries<5){ msg.textContent="기록 저장 중이에요. 다시 시도하고 있어요."; setTimeout(attempt,1200*tries+Math.random()*1200); return; }
+      msg.innerHTML='<span class="err">기록을 저장하지 못했어요. 인터넷을 확인한 뒤 눌러 주세요.</span> <button class="btn small alt" id="retryBtn" type="button">다시 저장</button>';
+      document.getElementById("retryBtn").onclick=function(){ tries=0; msg.textContent="기록 저장 중이에요."; attempt(); };
+    });
+  }
+  attempt();
+}
+
+/* ---------- 랭킹 ---------- */
+function rowHtml(x,isMe,moved){
+  var top=x.rank<=3?" top"+x.rank:"";
+  return '<div class="rr'+top+(isMe?" me":"")+'" data-name="'+esc(x.name)+'"><span class="n">'+x.rank+'</span>'
+    +'<span class="name">'+esc(x.name)+(isMe?" (나)":"")+(moved?'<span class="up">▲</span>':"")+'</span><span class="pts">'+x.score+'</span></div>';
+}
+function animateRows(box,before){
+  var still=false; try{ still=matchMedia("(prefers-reduced-motion:reduce)").matches; }catch(e){}
+  if(still) return;
+  Array.prototype.forEach.call(box.children,function(el){
+    var old=before[el.dataset.name]; if(!old) return;
+    var now=el.getBoundingClientRect(), dx=old.left-now.left, dy=old.top-now.top;
+    if(!dx&&!dy) return;
+    el.style.transform="translate("+dx+"px,"+dy+"px)";
+    requestAnimationFrame(function(){
+      el.style.transition="transform .7s ease";
+      el.style.transform="";
+      setTimeout(function(){el.style.transition="";},800);
+    });
+  });
+}
+function clockText(){ var d=new Date(); return ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2)+":"+("0"+d.getSeconds()).slice(-2); }
+function pollRanking(tok,baseMs,paint,fail){
+  var alive=true;
+  function run(){
+    if(tok!==viewToken) return;
+    if(document.hidden){ setTimeout(run,baseMs); return; }
+    loadRanking().then(function(rows){ if(tok===viewToken) paint(rows); })
+      .catch(function(){ if(tok===viewToken) fail(); })
+      .then(function(){ if(tok===viewToken&&alive) setTimeout(run,baseMs+Math.random()*3000); });
+  }
+  run();
+}
+function showRank(){
+  var tok=newView(), prevRanks={};
+  app.innerHTML='<main class="page"><header class="rankhead"><h1>'+esc(player.cls)+' 랭킹</h1><p class="rankmeta" id="meta" role="status">불러오는 중이에요.</p></header>'
+    +(player.demo?'<p class="notice">체험 모드예요. 내 이름을 뺀 나머지는 예시 이름이에요.</p>':'')
+    +'<div class="ranklist" id="list"></div>'
+    +'<div class="row"><button class="btn" id="againBtn" type="button">다시 도전</button></div>'+homeBtnHtml()+'</main>';
+  bindHomeBtn();
+  document.getElementById("againBtn").onclick=playMatch;
+  var box=document.getElementById("list"),meta=document.getElementById("meta");
+  pollRanking(tok,10000,function(rows){
+    var before={};
+    Array.prototype.forEach.call(box.children,function(el){before[el.dataset.name]=el.getBoundingClientRect();});
+    box.innerHTML=rows.length?rows.map(function(x){
+      var moved=prevRanks[x.name]&&x.rank<prevRanks[x.name];
+      return rowHtml(x,x.name===player.name,moved);
+    }).join(""):'<p class="empty">아직 기록이 없어요. 첫 기록을 세워 보세요!</p>';
+    rows.forEach(function(x){prevRanks[x.name]=x.rank;});
+    animateRows(box,before);
+    meta.textContent="참여 "+rows.length+"명 · 약 10초마다 갱신 · 최근 "+clockText();
+  },function(){ meta.textContent="연결을 다시 시도하고 있어요."; });
+}
+function showBoard(){
+  var tok=newView(), prevRanks={};
+  app.innerHTML='<main class="board"><header class="boardhead"><h1>'+esc(player.cls)+' 랭킹</h1><p id="meta" role="status">불러오는 중이에요.</p></header><div class="boardgrid" id="list"></div></main>';
+  var box=document.getElementById("list"),meta=document.getElementById("meta");
+  var demoNote=player.demo?" · 예시 이름":"";
+  function fit(n){
+    var cols=n<=10?1:n<=24?2:n<=45?3:4, perCol=Math.max(1,Math.ceil(n/cols));
+    box.style.gridTemplateRows="repeat("+perCol+",minmax(0,1fr))";
+    box.style.gridTemplateColumns=n?"repeat("+cols+",minmax(0,1fr))":"";
+    var h=box.clientHeight/perCol;
+    box.style.setProperty("--bfs",Math.max(14,Math.min(h*.62,Math.min(46,window.innerWidth/cols/9)))+"px");
+  }
+  function paint(rows){
+    var before={};
+    Array.prototype.forEach.call(box.children,function(el){before[el.dataset.name]=el.getBoundingClientRect();});
+    fit(rows.length);
+    box.innerHTML=rows.length?rows.map(function(x){
+      var moved=prevRanks[x.name]&&x.rank<prevRanks[x.name];
+      return rowHtml(x,false,moved);
+    }).join(""):'<p class="empty">아직 기록이 없어요.</p>';
+    rows.forEach(function(x){prevRanks[x.name]=x.rank;});
+    animateRows(box,before);
+    meta.textContent="참여 "+rows.length+"명 · 약 10초마다 갱신 · 최근 "+clockText()+demoNote;
+    box._rows=rows;
+  }
+  window.onresize=function(){ if(tok===viewToken&&box._rows) fit(box._rows.length); };
+  pollRanking(tok,10000,paint,function(){ meta.textContent="연결을 다시 시도하고 있어요."; });
+}
+
+/* ---------- 선생님 설정 ---------- */
+function parseSheetId(text){
+  var m=String(text).trim().match(/^https:\/\/script\.google\.com\/macros\/s\/([A-Za-z0-9_-]+)\/exec\/?$/);
+  return m?m[1]:"";
+}
+function validClass(c){ return /^[가-힣A-Za-z0-9][가-힣A-Za-z0-9 ·_-]{0,19}$/.test(c); }
+function copyText(text,btn){
+  function done(){ var o=btn.textContent; btn.textContent="복사했어요"; setTimeout(function(){btn.textContent=o;},1400); }
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(function(){ btn.textContent="복사가 막혔어요. 직접 선택해 주세요"; });
+  } else { btn.textContent="복사가 막혔어요. 직접 선택해 주세요"; }
+}
+function siteBase(){ return location.origin+location.pathname; }
+function loadQr(){
+  return new Promise(function(res,rej){
+    if(window.qrcode) return res();
+    var s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
+    s.onload=function(){res();}; s.onerror=rej;
+    document.head.appendChild(s);
+  });
+}
+function qrSvg(text){
+  var q=qrcode(0,"M"); q.addData(unescape(encodeURIComponent(text))); q.make();
+  return q.createSvgTag({cellSize:6,margin:0,scalable:true});
+}
+function wordPreview(){
+  return THINKERS.map(function(t){
+    return '<div><h3 class="tone-'+t.tone+'">'+esc(t.label)+'</h3><p><b>정답</b> '+list(ANSWERS[t.id]).map(esc).join(", ")+'</p><p><b>오답</b> '+list(WRONGS[t.id]).map(esc).join(", ")+'</p></div>';
+  }).join("");
+}
+function showSetup(){
+  newView();
+  var savedUrl=store("jkk_url")||""; var savedClasses; try{savedClasses=JSON.parse(store("jkk_classes")||"null");}catch(e){}
+  if(!Array.isArray(savedClasses)||!savedClasses.length) savedClasses=[""];
+  app.innerHTML='<main class="page setup">'
+    +'<button class="btn alt small" id="backBtn" type="button" style="align-self:flex-start">처음으로</button>'
+    +'<h1>선생님 설정</h1>'
+    +(PREVIEW?'<p class="notice">체험판에서는 시트 연결이 막혀 있어요. 설정 순서만 보실 수 있고, 실제 연결은 GitHub에 올린 주소에서 해 주세요.</p>':'')
+    +'<section class="step"><h2>1. 구글 시트 만들기</h2><ol>'
+    +'<li>구글 드라이브에서 새 스프레드시트를 만들어요.</li>'
+    +'<li>시트 메뉴에서 <code>확장 프로그램</code> → <code>Apps Script</code>를 열어요.</li>'
+    +'<li>원래 있던 코드를 지우고, 아래 버튼으로 복사한 코드를 붙여넣은 뒤 저장해요.</li></ol>'
+    +'<div class="row"><button class="btn" id="copyCode" type="button">시트 코드 복사</button></div></section>'
+    +'<section class="step"><h2>2. 웹 앱으로 배포하기</h2><ol>'
+    +'<li>오른쪽 위 <code>배포</code> → <code>새 배포</code>를 눌러요.</li>'
+    +'<li>유형 선택에서 <code>웹 앱</code>을 고르고, 실행 계정은 <code>나</code>, 액세스 권한은 <code>모든 사용자</code>로 해요.</li>'
+    +'<li>권한 승인 화면에서 내 계정을 고르고, <code>구글은 이 앱을 인증하지 않았습니다</code>가 나오면 <code>고급</code> → <code>(안전하지 않음)으로 이동</code> → <code>허용</code>을 눌러요. 내가 붙여넣은 코드를 내 계정으로 실행하기 때문에 나오는 화면이에요.</li>'
+    +'<li><code>웹 앱 URL</code>을 복사해요. <code>/exec</code>로 끝나는 주소예요.</li></ol></section>'
+    +'<section class="step"><h2>3. 주소 연결하기</h2><div><label for="urlInput">웹 앱 URL</label>'
+    +'<input id="urlInput" type="text" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec" value="'+esc(savedUrl)+'"></div>'
+    +'<div class="row"><button class="btn" id="testBtn" type="button">연결 확인</button></div><p id="testMsg" role="status"></p></section>'
+    +'<section class="step"><h2>4. 수업별 링크 만들기</h2><div id="classRows" style="display:flex;flex-direction:column;gap:8px"></div>'
+    +'<div class="row"><button class="btn alt" id="addClass" type="button">수업 추가</button><button class="btn" id="makeLinks" type="button">링크와 QR코드 만들기</button></div>'
+    +'<p class="err" id="linkErr" role="alert"></p><div id="linkOut" style="display:flex;flex-direction:column;gap:12px"></div></section>'
+    +'<section class="step"><h2>사용 전 확인</h2><p>학생 이름과 점수는 내 구글 시트에 저장되고, 링크를 아는 사람은 랭킹을 볼 수 있어요.</p></section>'
+    +'<details><summary>단어 목록 미리 보기</summary><div class="wordtable">'+wordPreview()+'</div></details>'
+    +'</main>';
+  document.getElementById("backBtn").onclick=showHome;
+  var copyBtn=document.getElementById("copyCode");
+  copyBtn.onclick=function(){ copyText(CODE_GS,copyBtn); };
+  var urlInput=document.getElementById("urlInput");
+  var testMsg=document.getElementById("testMsg");
+  document.getElementById("testBtn").onclick=function(){
+    var id=parseSheetId(urlInput.value);
+    if(!id){ testMsg.className="err"; testMsg.textContent="주소를 확인해 주세요. https://script.google.com/macros/s/ 로 시작하고 /exec 로 끝나야 해요. 학교 계정 주소라면 개인 계정으로 다시 배포해 주세요."; return; }
+    if(PREVIEW){ testMsg.className="err"; testMsg.textContent="체험판에서는 연결할 수 없어요. GitHub에 올린 주소에서 해 주세요."; return; }
+    testMsg.className=""; testMsg.textContent="확인하고 있어요.";
+    timedFetch(apiUrl(id)+"?action=ping&_="+Date.now()).then(function(r){return r.json();}).then(function(d){
+      if(!d.ok||d.app!=="jungkkeoksa") throw new Error("app");
+      store("jkk_url",urlInput.value.trim());
+      testMsg.textContent="연결됐어요! 이제 수업 이름을 입력해 주세요.";
+    }).catch(function(){
+      testMsg.className="err";
+      testMsg.textContent="연결하지 못했어요. 액세스 권한이 모든 사용자인지, 코드를 저장한 뒤 새로 배포했는지 확인해 주세요.";
+    });
+  };
+  var rowsBox=document.getElementById("classRows");
+  function addRow(v){
+    var i=rowsBox.children.length+1, r=document.createElement("div"); r.className="classrow";
+    r.innerHTML='<input type="text" id="cls'+i+'" maxlength="20" aria-label="수업 이름 '+i+'" placeholder="수업 이름 예: A반">'
+      +'<button class="btn alt small" type="button" aria-label="이 수업 지우기">지우기</button>';
+    r.querySelector("input").value=v||"";
+    r.querySelector("button").onclick=function(){ r.remove(); };
+    rowsBox.appendChild(r);
+  }
+  savedClasses.forEach(addRow);
+  document.getElementById("addClass").onclick=function(){ addRow(""); };
+  document.getElementById("makeLinks").onclick=function(){
+    var err=document.getElementById("linkErr"), out=document.getElementById("linkOut");
+    err.textContent=""; out.innerHTML="";
+    var id=parseSheetId(urlInput.value);
+    if(!id){ err.textContent="3번에서 웹 앱 URL을 먼저 입력해 주세요."; return; }
+    var names=Array.prototype.map.call(rowsBox.querySelectorAll("input"),function(x){return x.value.trim();}).filter(Boolean);
+    var bad=names.filter(function(n){return !validClass(n);});
+    if(!names.length){ err.textContent="수업 이름을 하나 이상 입력해 주세요."; return; }
+    if(bad.length){ err.textContent="수업 이름은 한글, 영문, 숫자로 20자 안에서 입력해 주세요: "+bad.join(", "); return; }
+    if(new Set(names).size!==names.length){ err.textContent="같은 수업 이름이 있어요. 이름을 다르게 해 주세요."; return; }
+    store("jkk_url",urlInput.value.trim()); store("jkk_classes",JSON.stringify(names));
+    names.forEach(function(n){
+      var play=siteBase()+"?s="+encodeURIComponent(id)+"&class="+encodeURIComponent(n);
+      var board=play+"&view=board";
+      var card=document.createElement("article"); card.className="linkcard";
+      card.innerHTML='<h3>'+esc(n)+'</h3>'
+        +'<p class="linktext"><b>학생 게임 링크</b><br>'+esc(play)+'</p>'
+        +'<div class="row"><button class="btn small" data-copy="play" type="button">학생 링크 복사</button><button class="btn small alt" data-qr="1" type="button">QR코드 크게 보기</button><button class="btn small alt" data-copy="board" type="button">칠판 랭킹 링크 복사</button></div>'
+        +'<p class="linktext"><b>칠판 랭킹 링크</b><br>'+esc(board)+'</p><div class="qr" hidden></div>';
+      var qrBox=card.querySelector(".qr");
+      card.querySelector('[data-copy="play"]').onclick=function(e){copyText(play,e.target);};
+      card.querySelector('[data-copy="board"]').onclick=function(e){copyText(board,e.target);};
+      card.querySelector("[data-qr]").onclick=function(e){
+        if(!qrBox.hidden){ qrBox.hidden=true; return; }
+        loadQr().then(function(){ qrBox.innerHTML=qrSvg(play); qrBox.hidden=false; })
+          .catch(function(){ e.target.textContent="QR코드를 불러오지 못했어요. 링크를 복사해 주세요"; });
+      };
+      out.appendChild(card);
+    });
+  };
+}
+
+/* ---------- 시작 ---------- */
+(function boot(){
+  if(SHEET_ID&&CLASS_NAME&&validClass(CLASS_NAME)){
+    if(VIEW==="board") showBoard(); else showStart();
+  } else { showHome(); }
+})();
+</script>
+
+</body></html>
