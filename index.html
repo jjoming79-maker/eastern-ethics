@@ -79,10 +79,18 @@ input[type=text]{width:100%;min-height:52px;padding:10px 14px;border:1.5px solid
 .tile.bad{background:var(--bad);box-shadow:none;animation:bad .3s ease-out forwards}
 .tile.ok i,.tile.bad i{color:var(--ink)}
 @keyframes ok{to{opacity:0;scale:1.25}}
+.game.kb{position:fixed;top:0;left:0;right:0;padding-top:env(safe-area-inset-top,0px)}
 .typebar{flex:none;padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:max(12px,env(safe-area-inset-bottom,0px));background:var(--night2);display:flex;justify-content:center}
 .typebar input{width:100%;max-width:720px;min-height:58px;padding:8px 18px;border:2px solid var(--line);border-radius:6px;background:var(--night);color:var(--text);font-family:var(--word);font-size:clamp(22px,2.6vw,30px);text-align:center;transition:border-color .15s}
 .typebar input:focus{outline:none;border-color:var(--paper)}
 .typebar input::placeholder{color:var(--muted);font-family:var(--body);font-size:18px}
+/* 휴대폰 세로 화면: 입력칸을 상단 바 바로 아래에 둔다. 아이폰 사파리가 입력칸을 보이려고 화면을 밀어 올리지 않게 하기 위해서다. */
+@media (max-width:700px) and (orientation:portrait){
+  .game .hud{order:0}
+  .game .typebar{order:1;padding-block:8px;border-bottom:1px solid var(--line)}
+  .game .rain{order:2}
+  .typebar input{min-height:48px}
+}
 .typebar input.ok{animation:inok .45s ease-out}
 .typebar input.bad{animation:inbad .4s ease-out}
 @keyframes inok{0%{border-color:var(--good);box-shadow:0 0 0 4px var(--good)}100%{box-shadow:0 0 0 0 transparent}}
@@ -496,9 +504,35 @@ function playThinker(t,order,totalBefore,tok){
     input.addEventListener("drop",function(e){ e.preventDefault(); });
     var gameEl=app.querySelector(".game");
     gameEl.addEventListener("pointerdown",function(e){
-      if (e.target!==input){ e.preventDefault(); input.focus(); }
+      if (e.target!==input){ e.preventDefault(); input.focus({preventScroll:true}); }
     });
-    input.focus();
+    /* 휴대폰 자판이 올라오면 화면을 밀어 올리지 않고, 보이는 영역 안에 게임을 맞춘다. */
+    var vv=window.visualViewport, root=document.documentElement;
+    var oldOverflow=root.style.overflow; root.style.overflow="hidden"; document.body.style.overflow="hidden";
+    function fitView(){
+      if (tok!==viewToken) return;
+      var h=vv?vv.height:window.innerHeight, top=vv?vv.offsetTop:0;
+      /* 화면 자판이 올라와 보이는 영역이 줄었을 때만 게임을 그 영역에 고정한다. PC에서는 원래 배치 그대로다. */
+      if (vv && h < window.innerHeight-80){
+        gameEl.classList.add("kb");
+        gameEl.style.height=h+"px";
+        gameEl.style.transform="translateY("+top+"px)";
+        if (window.scrollY) window.scrollTo(0,0);
+      } else {
+        gameEl.classList.remove("kb");
+        gameEl.style.height=""; gameEl.style.transform="";
+      }
+    }
+    if (vv){ vv.addEventListener("resize",fitView); vv.addEventListener("scroll",fitView); }
+    window.addEventListener("resize",fitView);
+    input.addEventListener("focus",function(){ setTimeout(fitView,50); setTimeout(fitView,350); });
+    function unfit(){
+      if (vv){ vv.removeEventListener("resize",fitView); vv.removeEventListener("scroll",fitView); }
+      window.removeEventListener("resize",fitView);
+      root.style.overflow=oldOverflow; document.body.style.overflow="";
+    }
+    fitView();
+    input.focus({preventScroll:true});
 
     function lanesFor(){ return Math.max(3,Math.min(6,Math.floor(W/230))); }
     function spawn(s){
@@ -518,13 +552,13 @@ function playThinker(t,order,totalBefore,tok){
     }
     function finish(){
       cancelAnimationFrame(rafId);
-      input.blur();
+      input.blur(); unfit();
       live.forEach(function(o){ if(!o.done&&o.ok) res.missed.push(o.w); });
       seq.slice(next).forEach(function(s){ if(s.ok) res.missed.push(s.w); });
       resolve({res:res,total:total});
     }
     function frame(now){
-      if (tok!==viewToken) return;
+      if (tok!==viewToken){ unfit(); return; }
       var ms=now-begun, dt=now-prev; prev=now; nowMs=ms;
       W=rain.clientWidth; H=rain.clientHeight;
       if (ms>=ROUND_MS){ hudTime.textContent="0초"; finish(); return; }
